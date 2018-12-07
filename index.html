@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+	<!-- Required meta tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!-- Bootstrap CSS -->
+	<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.bundle.min.js" integrity="sha384-pjaaA8dDz/5BgdFUPX6M/9SUZv4d12SUPF0axWc+VRZkx5xU3daN+lYb49+Ax+Tl" crossorigin="anonymous"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/axios/dist/axios.standalone.js"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/CryptoJS/rollups/hmac-sha256.js"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/CryptoJS/rollups/sha256.js"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/CryptoJS/components/hmac.js"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/CryptoJS/components/enc-base64.js"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/url-template/url-template.js"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/apiGatewayCore/sigV4Client.js"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/apiGatewayCore/apiGatewayClient.js"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/apiGatewayCore/simpleHttpClient.js"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/apiGatewayCore/utils.js"></script>
+
+
+
+	<script type="text/javascript" src="apiGateway-js-sdk/lib/apiGatewayCore/apiGatewayClient.js"></script>
+	<script type="text/javascript" src="apiGateway-js-sdk/apigClient.js"></script>
+
+	<link href="css/main.css" rel="stylesheet">
+
+	<title>Photo Album</title>
+  </head>
+  <body>
+	<script type="text/javascript">
+	var apigClient = apigClientFactory.newClient({
+			apiKey: 'WJe9vx3mlz9QIbx1gz0O63hEkGP0hkly55mx9Zyt'
+		});
+	window.onload = function(){
+
+		var form = document.getElementById('example');
+		form.onsubmit = function(e) {
+			e.preventDefault();
+			console.log(form.search.value);
+			var params = {
+				'q': form.search.value,
+			}
+			var body;
+			var additionalParams;
+			apigClient.searchGet(params, body, additionalParams)
+			.then(function(result){
+				//This is where you would put a success callback
+				img_home.innerHTML = '';
+				console.log(result["data"]["hits"]["total"]);
+
+				var i;
+				if(result["data"]["hits"]["total"]==0){
+				img_home.innerHTML = '<div style="color:red; font-size:26px; font-weight:bold; font-style: italic;"  align="center"> Sorry! There are no images with the above content in your gallery</div>';
+				}
+				else{
+				for (i = 0; i < result["data"]["hits"]["total"]; i++) {
+					console.log("here");
+					var img = new Image();
+					img.width = "300";
+					img.height = "300";
+					var temp = result["data"]["hits"]["hits"][i]["_source"]["objectKey"];
+					console.log(temp);
+					img.src = "https://s3.amazonaws.com/b2-store-photos/" + temp;
+					img_home.appendChild(img);
+				}
+				}
+			}).catch( function(result){
+				//This is where you would put an error callback
+				console.log("Fails to send searchGet request");
+			});
+		}
+		
+	
+function readFile(evt) {
+    //Retrieve all the files from the FileList object
+    var files = evt.target.files; 
+    		//alert("Hi")
+    if (files) {
+        for (var i=0, f; f=files[i]; i++) {
+	          var r = new FileReader();
+			  var additionalParams = {
+				headers: {
+				"Content-Type": "text/plain",
+				}
+			};
+			console.log(files);
+			console.log(files["0"]);
+			var type = "image/" +f["name"].split(".")[1];
+			console.log(type);
+			var params = {
+				'filename' : f["name"],
+				'Content-Type' : type
+			}
+            r.onload = function(evtfile) {
+               
+             var contents = evtfile.target.result;
+            
+			//this line you have to put proper file object
+			
+			
+			console.log(contents)
+			// removing data:image... from the base 64 string to send just the  image contents
+			apigClient.uploadPut(params, contents.replace(/^data:image\/[a-z]+;base64,/, ""), additionalParams)
+			.then(function(result){
+			//alert("File Uploaded Successfully");
+			document.getElementById("fileinput").value = "";
+			file_home.innerHTML = '';
+			file_home.innerHTML = '<div style="color:blue; font-size:26px; font-weight:bold; font-style: italic;"  align="center"> File Uploaded Successfully</div>';
+			
+			
+			}).catch(function(result){
+				console.log("failed");
+			});
+                
+            }
+
+            r.readAsDataURL(f); // converts image file to base 64 format
+			//console.log(r.readAsBinaryString(f))
+        }   
+    } else {
+	      alert("Failed to load files"); 
+    }
+  }
+  
+  document.getElementById('fileinput').addEventListener('change', readFile, false);
+	}
+	
+function startDictation() {
+	//alert("Speak now")
+   if (window.hasOwnProperty('webkitSpeechRecognition')) {
+   	//alert("Speak now 2")
+      var recognition = new webkitSpeechRecognition();
+
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.lang = "en-US";
+      recognition.start();
+
+      recognition.onresult = function(e) {
+		console.log(e)
+        document.getElementById('search').value
+                                 = e.results[0][0].transcript;
+        recognition.stop();
+		var params = {
+				'q': e.results[0][0].transcript,
+			}
+			var body;
+			var additionalParams;
+			apigClient.searchGet(params, body, additionalParams)
+			.then(function(result){
+				//This is where you would put a success callback
+				img_home.innerHTML = '';
+				console.log(result["data"]["hits"]["total"]);
+
+				var i;
+				if(result["data"]["hits"]["total"]==0){
+				img_home.innerHTML = '<div style="color:red; font-size:26px; font-weight:bold; font-style: italic;"  align="center"> Sorry! There are no images with the above content in your gallery</div>';
+				}
+				else{
+				for (i = 0; i < result["data"]["hits"]["total"]; i++) {
+					console.log("here");
+					var img = new Image();
+					img.width = "300";
+					img.height = "300";
+					var temp = result["data"]["hits"]["hits"][i]["_source"]["objectKey"];
+					console.log(temp);
+					img.src = "https://s3.amazonaws.com/b2-store-photos/" + temp;
+					img_home.appendChild(img);
+				}
+				}
+			}).catch( function(result){
+				//This is where you would put an error callback
+				console.log("Fails to send searchGet request");
+			});
+      };
+	};
+}
+
+	</script>
+
+
+
+
+
+
+
+		<div class="jumbotron">
+			  <h1>Photo Album</h1>
+			  <p>Intelligent search platform to query your photos </p>
+		</div>
+		<div class="centered">
+			<h4>Search Photos</h4>
+			<form id="example">
+			  <input type="text" placeholder="Search.." name="search" id ="search">
+			  <button type="submit"><i class="fa fa-search"></i></button>
+			   <img onclick="startDictation()" src="https://i.imgur.com/cHidSVu.gif" />
+			</form>
+		</div>
+			<div id="img_home"></div>
+			<br/>
+		<div class="centered">
+			<h4>Upload Photos</h4>
+			<form method="post" enctype="multipart/form-data" id="upload">
+				<input type="file" id = "fileinput" name="files" accept="image/*">
+			</form>
+			<div id="file_home"></div>
+
+		</div>
+  </body>
+</html>
